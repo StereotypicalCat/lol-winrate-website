@@ -2,7 +2,7 @@ import React from 'react';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import Slider from '@material-ui/core/Slider';
-import {Button, Checkbox, FormControlLabel, FormGroup, FormLabel, TextField} from "@material-ui/core";
+import {Button, Checkbox, CircularProgress, FormControlLabel, FormGroup, FormLabel, TextField} from "@material-ui/core";
 import axios from "axios";
 import './App.css';
 
@@ -10,18 +10,33 @@ export default function App() {
 
     const [requestIsAvailable, setRequestIsAvailable] = React.useState<boolean>(true);
 
-    const [gamesWon, setGamesWon] = React.useState<number>(0);
-    const [gamesLost, setGamesLost] = React.useState<number>(0);
-    const [winrateOfUser, setwinrateOfUser] = React.useState<string>("");
+    const [requestAnswer, setRequestAnswer] = React.useState({
+        error: "",
+        isFirst: true,
+        hasGotten: true,
+        user1: "",
+        user2: "",
+        user3: "",
+        user4: "",
+        user5: "",
+        gamesWon: 0,
+        totalGames: 0,
+    })
 
     const [noOfGames, setNoOfGames] = React.useState<number>(30);
     const handleNoOfGames = (event: any, newValue: number | number[]) => {
         setNoOfGames(newValue as number);
     };
 
-    const [username, setUsername] = React.useState<string>("");
-    const handleUsername = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setUsername(event.target.value);
+    const [teamUsernames, setTeamUsernames] = React.useState({
+        user1: "",
+        user2: "",
+        user3: "",
+        user4: "",
+        user5: ""
+    });
+    const handleUsernames = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setTeamUsernames({ ...teamUsernames, [event.target.name]: event.target.value });
     };
 
     /*
@@ -39,15 +54,73 @@ export default function App() {
         setGameTypes({ ...gameTypes, [event.target.name]: event.target.checked });
     };
 
+    const sendRequest = (usernames:  {user1: string, user2: string, user3: string, user4: string, user5: string}) => {
 
+        setRequestAnswer({
+            ...requestAnswer,
+            isFirst: false,
+            hasGotten: false
+        })
 
-    const sendRequest = (username: string) => {
 
         if (!requestIsAvailable){
             return;
         }
 
-        const url = `https://winrateapi.lucaswinther.info/api/WinRate/GetWinrateTogether/1`
+        // FIX Username Order
+        let usernamesList = [];
+        if (usernames.user1 !== ""){
+            usernamesList.push(usernames.user1);
+        }
+        if (usernames.user2 !== ""){
+            usernamesList.push(usernames.user2);
+        }
+        if (usernames.user3 !== ""){
+            usernamesList.push(usernames.user3);
+        }
+        if (usernames.user4 !== ""){
+            usernamesList.push(usernames.user4);
+        }
+        if (usernames.user5 !== ""){
+            usernamesList.push(usernames.user5);
+        }
+
+        let correctUsernames;
+        switch (usernamesList.length) {
+            case 1:
+                correctUsernames = {
+                    user1: usernamesList[0]
+                }
+                break;
+            case 2:
+                correctUsernames = {
+                    user1: usernamesList[0],
+                    user2: usernamesList[1]
+                }
+                break;
+            case 3:
+                correctUsernames = {
+                    user1: usernamesList[0],
+                    user2: usernamesList[1],
+                    user3: usernamesList[2]
+                }
+                break;
+            case 4:
+                correctUsernames = {
+                    user1: usernamesList[0],
+                    user2: usernamesList[1],
+                    user3: usernamesList[2],
+                    user4: usernamesList[3]
+                }
+                break;
+            case 5:
+                correctUsernames = {
+                    ...usernames
+                }
+                break;
+        }
+
+        const url = `https://winrateapi.lucaswinther.info/api/WinRate/GetWinrateTogether/${usernamesList.length}`
 
         const convertMatchTypesToBackend = (gameTypes: {aram: boolean, flex: boolean, soloduo: boolean, draft: boolean, blind: boolean, other: boolean}) => {
 
@@ -75,8 +148,10 @@ export default function App() {
             return returnString;
         }
 
+        const userNameThatIsInTheRequest = {...correctUsernames}
+
         const parameters = {
-            user1: username,
+            ...correctUsernames,
             NoMatches: noOfGames,
             MatchSelector: `${convertMatchTypesToBackend(gameTypes)}`
         }
@@ -86,14 +161,27 @@ export default function App() {
             params: parameters
         }).then(function (result) {
             console.log(result.data);
-            setGamesWon(result.data.wins);
-            setGamesLost(result.data.losses);
+
+            setRequestAnswer({
+                ...requestAnswer,
+                ...userNameThatIsInTheRequest,
+                gamesWon: result.data.wins,
+                totalGames: result.data.wins + result.data.losses,
+                hasGotten: true
+            })
+
         }).catch(function (error) {
             console.log("There was an error getting the winrate");
             console.log(error);
+
+            setRequestAnswer({
+                ...requestAnswer,
+                error: "Sorry, there was an error. Please check your usernames, or wait again and try later.",
+                hasGotten: true
+            })
+
         }).then(function () {
             setRequestIsAvailable(true);
-            setwinrateOfUser(username);
         });
     }
 
@@ -101,7 +189,16 @@ export default function App() {
     return (
         <div id={"appContainer"}>
 
-            <TextField id="standard-basic" label="username" value={username} onChange={handleUsername} />
+            <FormLabel component="legend">Users</FormLabel>
+            <FormGroup>
+                 <TextField id="standard-basic" label="user1" value={teamUsernames.user1} onChange={handleUsernames} name={"user1"}/>
+                 <TextField id="standard-basic" label="user2" value={teamUsernames.user2} onChange={handleUsernames} name={"user2"}/>
+                <TextField id="standard-basic" label="user3" value={teamUsernames.user3} onChange={handleUsernames} name={"user3"} />
+                <TextField id="standard-basic" label="user4" value={teamUsernames.user4} onChange={handleUsernames} name={"user4"} />
+                <TextField id="standard-basic" label="user5" value={teamUsernames.user5} onChange={handleUsernames} name={"user5"} />
+            </FormGroup>
+
+
 
             <Typography gutterBottom>
                 Number of games: {noOfGames}
@@ -140,13 +237,22 @@ export default function App() {
                 />
             </FormGroup>
 
-            <Button variant="contained" color="primary" onClick={() => sendRequest(username)}>
+            <Button variant="contained" color="primary" onClick={() => sendRequest(teamUsernames)}>
                 Send
             </Button>
 
-            <Typography>
-                {winrateOfUser}'s winrate is {(gamesWon/(gamesLost + gamesWon) * 100).toFixed(2)}% based upon their last {gamesLost + gamesWon} games.
-            </Typography>
+            <p>{requestAnswer.error}</p>
+
+            {requestAnswer.isFirst ? "" :
+                !requestAnswer.hasGotten ?
+                    <CircularProgress /> :
+                    requestAnswer.error !== "" ? <p>{requestAnswer.error}</p> :
+                            <Typography>
+                                The winrate of {requestAnswer.user1}{requestAnswer.user2 !== "" ? `, ${requestAnswer.user2}` : ""}{requestAnswer.user3 !== "" ? `, ${requestAnswer.user3}` : ""}{requestAnswer.user4 !== "" ? `, ${requestAnswer.user4}` : ""}{requestAnswer.user5 !== "" ? `, ${requestAnswer.user5}` : ""} is {((requestAnswer.gamesWon/requestAnswer.totalGames) * 100).toFixed(2)}% based on their recent {requestAnswer.totalGames} {requestAnswer.totalGames > 1 ? "games" : "game"} together.
+                            </Typography>
+            }
+
+
 
         </div>
 
