@@ -8,7 +8,15 @@ import './App.css';
 
 export default function App() {
 
-    const [requestIsAvailable, setRequestIsAvailable] = React.useState<boolean>(true);
+    // Send request if enter Is GIGA Repeated Right Now
+/*    document.addEventListener('keydown', function(event) {
+        if (event.repeat){
+            return;
+        }
+        if (event.key === "Enter"){
+            sendRequest(teamUsernames);
+        }
+        });*/
 
     const [requestAnswer, setRequestAnswer] = React.useState({
         error: "",
@@ -56,16 +64,18 @@ export default function App() {
 
     const sendRequest = (usernames:  {user1: string, user2: string, user3: string, user4: string, user5: string}) => {
 
+        console.log("Trying to send request...")
+
+        if (!requestAnswer.hasGotten){
+            console.log("Please wait for current request to finish before sending a new request")
+            return;
+        }
+
         setRequestAnswer({
             ...requestAnswer,
             isFirst: false,
             hasGotten: false
         })
-
-
-        if (!requestIsAvailable){
-            return;
-        }
 
         // FIX Username Order
         let usernamesList = [];
@@ -156,7 +166,6 @@ export default function App() {
             MatchSelector: `${convertMatchTypesToBackend(gameTypes)}`
         }
 
-        setRequestIsAvailable(false);
         axios.get(url, {
             params: parameters
         }).then(function (result) {
@@ -167,7 +176,9 @@ export default function App() {
                 ...userNameThatIsInTheRequest,
                 gamesWon: result.data.wins,
                 totalGames: result.data.wins + result.data.losses,
-                hasGotten: true
+                hasGotten: true,
+                isFirst: false,
+                error: ""
             })
 
         }).catch(function (error) {
@@ -177,11 +188,12 @@ export default function App() {
             setRequestAnswer({
                 ...requestAnswer,
                 error: "Sorry, there was an error. Please check your usernames, or wait again and try later.",
+                isFirst: false,
                 hasGotten: true
             })
 
         }).then(function () {
-            setRequestIsAvailable(true);
+            // TODO: Maybe move assignment of HasGotten into here.
         });
     }
 
@@ -240,8 +252,6 @@ export default function App() {
             <Button variant="contained" color="primary" onClick={() => sendRequest(teamUsernames)}>
                 Send
             </Button>
-
-            <p>{requestAnswer.error}</p>
 
             {requestAnswer.isFirst ? "" :
                 !requestAnswer.hasGotten ?
