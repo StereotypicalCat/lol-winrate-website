@@ -2,7 +2,7 @@ import React from 'react';
 import Grid from '@material-ui/core/Grid';
 import Typography from '@material-ui/core/Typography';
 import Slider from '@material-ui/core/Slider';
-import {Button, TextField} from "@material-ui/core";
+import {Button, Checkbox, FormControlLabel, FormGroup, FormLabel, TextField} from "@material-ui/core";
 import axios from "axios";
 import './App.css';
 
@@ -24,6 +24,23 @@ export default function App() {
         setUsername(event.target.value);
     };
 
+    /*
+    * Game type buttons Buttons:
+    * */
+    const [gameTypes, setGameTypes] = React.useState({
+        aram: true,
+        flex: true,
+        soloduo: true,
+        draft: true,
+        blind: true,
+        other: true
+    });
+    const handleChangeGameTypes = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setGameTypes({ ...gameTypes, [event.target.name]: event.target.checked });
+    };
+
+
+
     const sendRequest = (username: string) => {
 
         if (!requestIsAvailable){
@@ -32,9 +49,36 @@ export default function App() {
 
         const url = `https://winrateapi.lucaswinther.info/api/WinRate/GetWinrateTogether/1`
 
+        const convertMatchTypesToBackend = (gameTypes: {aram: boolean, flex: boolean, soloduo: boolean, draft: boolean, blind: boolean, other: boolean}) => {
+
+            let returnString = "";
+
+            if (gameTypes.aram){
+                returnString = returnString + "a";
+            }
+            if (gameTypes.soloduo){
+                returnString = returnString + "s";
+            }
+            if (gameTypes.flex){
+                returnString = returnString + "f";
+            }
+            if (gameTypes.draft){
+                returnString = returnString + "d";
+            }
+            if (gameTypes.blind){
+                returnString = returnString + "b";
+            }
+            if (gameTypes.other){
+                returnString = returnString + "o";
+            }
+
+            return returnString;
+        }
+
         const parameters = {
             user1: username,
-            NoMatches: noOfGames
+            NoMatches: noOfGames,
+            MatchSelector: `${convertMatchTypesToBackend(gameTypes)}`
         }
 
         setRequestIsAvailable(false);
@@ -67,6 +111,34 @@ export default function App() {
                     <Slider value={noOfGames} onChange={handleNoOfGames} aria-labelledby="continuous-slider" />
                 </Grid>
             </Grid>
+
+            <FormLabel component="legend">Assign Game Types</FormLabel>
+            <FormGroup>
+                <FormControlLabel
+                    control={<Checkbox checked={gameTypes.aram} onChange={handleChangeGameTypes} name="aram" />}
+                    label="Aram"
+                />
+                <FormControlLabel
+                    control={<Checkbox checked={gameTypes.flex} onChange={handleChangeGameTypes} name="flex" />}
+                    label="Ranked Flex"
+                />
+                <FormControlLabel
+                    control={<Checkbox checked={gameTypes.soloduo} onChange={handleChangeGameTypes} name="soloduo" />}
+                    label="Ranked Solo/Duo"
+                />
+                <FormControlLabel
+                    control={<Checkbox checked={gameTypes.draft} onChange={handleChangeGameTypes} name="draft" />}
+                    label="Normal Draft"
+                />
+                <FormControlLabel
+                    control={<Checkbox checked={gameTypes.blind} onChange={handleChangeGameTypes} name="blind" />}
+                    label="Normal Blind"
+                />
+                <FormControlLabel
+                    control={<Checkbox checked={gameTypes.other} onChange={handleChangeGameTypes} name="other" />}
+                    label="Other Gamemodes (Poro King, One For All, Etc)"
+                />
+            </FormGroup>
 
             <Button variant="contained" color="primary" onClick={() => sendRequest(username)}>
                 Send
